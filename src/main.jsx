@@ -8,6 +8,7 @@ import {useGSAP} from '@gsap/react';
 import {cast,places} from './cast';
 import {localize} from './i18n';
 import WorldStory from './WorldStory';
+import BenWelcome from './BenWelcome';
 import './style.css';
 import './refinements.css';
 import './hero-playtime.css';
@@ -18,7 +19,7 @@ const yt='https://www.youtube.com/@becartoontv';
 const fb='https://www.facebook.com/BeCartoonTV/';
 function Portrait({person,className=''}){const crops={ben:[480,650,130],maya:[480,675,115],tiko:[480,610,125],zip:[480,785,0],rio:[430,635,120]};const [w,h,top]=crops[person.id];return <div className={`portrait portrait-${person.id} ${className}`} style={{aspectRatio:`${w}/${h}`}}><img style={{width:`${1774/w*100}%`,top:`-${top/h*100}%`}} src={asset(`characters/${person.file}`)} alt={`${person.name}, original BeCartoonTV character`} loading="lazy"/></div>}
 function Cloud({className=''}){return <svg className={`cloud ${className}`} aria-hidden="true" viewBox="0 0 250 90"><path d="M12 75C-7 49 23 24 47 35 45 0 102-8 115 29 135 0 176 15 174 39 203 24 239 36 237 62L247 75Z" fill="#fffdf0" stroke="#233225" strokeWidth="3"/></svg>}
-function App(){
+function App({introActive=false}){
  const root=useRef(null),videoRef=useRef(null),dialog=useRef(null);
  const [language,setLanguage]=useState(()=>{try{return localStorage.getItem('becartoon-language')==='vi'?'vi':'en'}catch{return 'en'}});
  useEffect(()=>{document.documentElement.lang=language;try{localStorage.setItem('becartoon-language',language)}catch{}},[language]);
@@ -28,10 +29,9 @@ function App(){
  useEffect(()=>{if(!videoRef.current)return;if(paused||reduced)videoRef.current.pause();else videoRef.current.play().catch(()=>{})},[paused,reduced]);
  useEffect(()=>{if(playing){dialog.current.showModal();return()=>{dialog.current?.close()}}},[playing]);
  useGSAP(()=>{
-  if(paused)return;
+  if(paused||introActive)return;
   const mm=gsap.matchMedia();
   mm.add('(prefers-reduced-motion: no-preference)',()=>{
-   gsap.timeline({defaults:{ease:'back.out(1.3)',duration:.8}}).from('.hero-copy > *',{y:30,opacity:0,stagger:.11}).from('.hero-stamp',{rotation:-12,scale:.5,opacity:0},'-=.35');
    gsap.to('.cloud-one',{x:55,duration:16,yoyo:true,repeat:-1,ease:'sine.inOut'});
    gsap.to('.cloud-two',{x:-40,duration:19,yoyo:true,repeat:-1,ease:'sine.inOut'});
    gsap.utils.toArray('.reveal').forEach(el=>gsap.from(el,{y:40,opacity:0,duration:.75,ease:'power2.out',scrollTrigger:{trigger:el,start:'top 92%',once:true}}));
@@ -49,8 +49,8 @@ function App(){
   document.fonts.ready.then(()=>{if(alive){refresh()}});
   const images=[...root.current.querySelectorAll('img')];images.forEach(img=>img.addEventListener('load',refresh));
   return()=>{alive=false;images.forEach(img=>img.removeEventListener('load',refresh));mm.revert()};
- },{scope:root,dependencies:[paused,language],revertOnUpdate:true});
- useGSAP(()=>{if(paused||reduced)return;gsap.from('.cast-figure',{x:-20,rotation:-3,opacity:0,duration:.4,ease:'power2.out'})},{scope:root,dependencies:[person.id,paused,reduced],revertOnUpdate:true});
+ },{scope:root,dependencies:[paused,language,introActive],revertOnUpdate:true});
+ useGSAP(()=>{if(paused||reduced||introActive)return;gsap.from('.cast-figure',{x:-20,rotation:-3,opacity:0,duration:.4,ease:'power2.out'})},{scope:root,dependencies:[person.id,paused,reduced,introActive],revertOnUpdate:true});
  useEffect(()=>{const timer=setTimeout(()=>ScrollTrigger.refresh(),500);return()=>clearTimeout(timer)},[storyOpen,language]);
  const nav=()=>setMenu(false);
  const {contextSafe}=useGSAP({scope:root});
@@ -71,5 +71,6 @@ function App(){
  <dialog ref={dialog} onCancel={()=>setPlaying(null)} onClick={e=>{if(e.target===dialog.current)setPlaying(null)}}><div className="player-head"><h2>{playing?.title}</h2><button onClick={()=>setPlaying(null)} aria-label="Close video">✕</button></div>{playing&&<iframe title={playing.title} src={`https://www.youtube-nocookie.com/embed/${playing.id}?rel=0`} allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen/>}<a href={playing?`https://www.youtube.com/watch?v=${playing.id}`:yt} target="_blank" rel="noreferrer">Watch directly on YouTube ↗</a></dialog>
  </div></div></div>,language)
 }
-createRoot(document.getElementById('root')).render(<React.StrictMode><App/></React.StrictMode>);
+function WebsiteEntry(){const [welcoming,setWelcoming]=useState(true);const done=React.useCallback(()=>setWelcoming(false),[]);return <><div className={welcoming?'website-entry-content is-entering':'website-entry-content'} inert={welcoming} aria-hidden={welcoming?true:undefined}><App introActive={welcoming}/></div>{welcoming&&<BenWelcome onComplete={done}/>}</>}
+createRoot(document.getElementById('root')).render(<React.StrictMode><WebsiteEntry/></React.StrictMode>);
 
